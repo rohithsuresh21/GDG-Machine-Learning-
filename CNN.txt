@@ -1,0 +1,94 @@
+CNN
+Layers Used to Build ConvNets
+A complete Convolution Neural Networks architecture is also known as covnets. A covnets is a sequence of layers, and every layer transforms one volume to another through a differentiable function.
+
+Let’s take an example by running a covnets on of image of dimension 32 x 32 x 3.
+
+Input Layers: It’s the layer in which we give input to our model. In CNN, Generally, the input will be an image or a sequence of images. This layer holds the raw input of the image with width 32, height 32, and depth 3.
+
+Convolutional Layers: This is the layer, which is used to extract the feature from the input dataset. It applies a set of learnable filters known as the kernels to the input images. The filters/kernels are smaller matrices usually 2x2, 3x3, or 5x5 shape. it slides over the input image data and computes the dot product between kernel weight and the corresponding input image patch. The output of this layer is referred as feature maps. Suppose we use a total of 12 filters for this layer we’ll get an output volume of dimension 32 x 32 x 12.
+
+Activation Layer: By adding an activation function to the output of the preceding layer, activation layers add nonlinearity to the network. it will apply an element-wise activation function to the output of the convolution layer. Some common activation functions are RELU: max(0, x),  Tanh, Leaky RELU, etc. The volume remains unchanged hence output volume will have dimensions 32 x 32 x 12.
+
+Pooling layer: This layer is periodically inserted in the covnets and its main function is to reduce the size of volume which makes the computation fast reduces memory and also prevents overfitting. Two common types of pooling layers are max pooling and average pooling. If we use a max pool with 2 x 2 filters and stride 2, the resultant volume will be of dimension 16x16x12.
+
+Flattening: The resulting feature maps are flattened into a one-dimensional vector after the convolution and pooling layers so they can be passed into a completely linked layer for categorization or regression.
+
+Fully Connected Layers: It takes the input from the previous layer and computes the final classification or regression task.
+
+Output Layer: The output from the fully connected layers is then fed into a logistic function for classification tasks like sigmoid or softmax which converts the output of each class into the probability score of each class.
+
+
+
+
+
+code
+1.Import Libraries:
+code:
+---
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import datasets, transforms , models
+from PIL import Image
+---
+explanation:
+torch: The foundation.1 It handles Tensors (the multi-dimensional arrays you learned about, like 3x3x3).
+torch.nn: This stands for Neural Networks. It contains the pre-made "bricks" to build your brain—like Convolutional layers, Linear (Dense) layers, and Activation functions (ReLU).
+torch.optim: This is the Optimizer. It’s the "mechanic" that adjusts the weights of your model based on the mistakes it makes during training.
+torchvision is the specific toolkit for Computer Vision (Images and Video).
+ 	a).datasets: This has built-in code to load famous datasets (like MNIST or CIFAR-10) or, more importantly, to read images from your own folders (ImageFolder).
+ 	b).transforms: This is your "Image Filter" department. It converts your .jpg files into math tensors and resizes them so they all fit the model's input size.
+ 	c).models: This contains famous "Pre-trained" brains like ResNet or VGG. You can "borrow" these brains instead of building one from scratch!
+PIL: is the standard library that opens the file from your hard drive so that torchvision can start turning it into math.
+
+2.Data Transformation (Preprocessing)
+code:
+---
+transforming = transforms.Compose([
+    transforms.Resize((128, 128)),      # Resize to 128x128 pixels
+    transforms.ToTensor(),              # Convert to a 3D Tensor (3, 128, 128)
+    transforms.Normalize((0.5,), (0.5,)) # Scale pixel values to -1 and 1
+])
+---
+
+explanation:
+The model cannot "read" a JPEG directly. We must resize it to a square, turn it into a Tensor (math array), and Normalize the colors so the math doesn't "explode".
+why we normalize?
+ 	If an image is very bright (pixels near 255), the gradients during Backpropagation will become massive. This makes the model "overshoot" the target, causing the training to fail or become very unstable.
+ 	It prevents your weights from becoming "NaN" (Not a Number), which happens when the math gets too big for the computer to handle.
+ 
+
+3.Load the Dataset
+code:
+---
+# Assuming your folders are structure: data/train/dog and data/train/cat
+train_dataset = datasets.ImageFolder(root='data/train', transform=transforming)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
+---
+
+4.Define the Architecture (Your Sketch)
+code:
+(torch style)
+---
+class DogCatCNN(nn.Module):
+    def __init__(self):
+        super(DogCatCNN, self).__init__()
+        # 3 input channels (RGB) -> 16 kernels (patterns)
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+ 
+        # Flattening logic: 16 channels * (128/2/2 = 32 pixels)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(16 * 64 * 64, 128)
+        self.fc2 = nn.Linear(128, 2) # 2 output classes: Dog or Cat
+
+    def forward(self, x):
+        x = self.pool(torch.relu(self.conv1(x)))
+        x = self.flatten(x)
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+model = DogCatCNN()
+---
